@@ -4,4 +4,4 @@ PinPoint is a side project I have been working on recently. The goal is to make 
 
 Curently, the it supports only single addresses (aka no intersections) and there is ALOT of work to do - espically documentation!
 
-Scrappy demo I put together: http://http://54.152.13.104/
+Scrappy demo I put together: http://54.152.13.104/
