@@ -1,7 +1,19 @@
 # PinPointGeocoder
-PinPoint Geocoder 
-PinPoint is a side project I have been working on recently. The goal is to make a fully functioning open source geocoder build in Python, running off open data.
+PinPoint is a side project I have been developing. It started out as a small Python module to parse out and clean addresses - particularly ones with bad or incorrect data. The project eventually grew from an addresses parser to full scale geocoder (were not there, yet!).
 
-Curently, the it supports only single addresses (aka no intersections) and there is ALOT of work to do - espically documentation!
+The goal of PinPoint is to make a fully functioning and accurate open source geocoder built in Python, open data and, PostgreSQL.
 
-Scrappy demo I put together: http://www.pinpointgeocoder.com/
+Curently, the geocoder supports only single addresses (aka no intersections). There is a lot of work to do so please feel free to help out!
+
+Scrappy demo: http://www.pinpointgeocoder.com/
+
+*I am working on documentation now!*
+
+### Python dependencies
+
+    jellyfish - Calculating Metaphones
+    psycopg2 - Postgresql Driver
+    
+    
+    
+    
