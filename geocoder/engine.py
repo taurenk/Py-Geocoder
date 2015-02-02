@@ -3,6 +3,7 @@ import psycopg2
 import address
 import standards
 import regex_library
+from decimal import Decimal
 from jellyfish import metaphone
 from math import radians, degrees, cos, sin, asin, sqrt, atan, pi, atan2
 import sys
@@ -276,9 +277,10 @@ class Engine:
         if address.state: results['state'] = address.state
         if address.zip: results['zipcode'] = address.zip
         if point: 
-            results['lat'] = str(point[0])
-            results['lon'] = str(point[1])
-            print 'LAT/LON=%s,%s' % (point[0],point[1])
+            results['lat'] = Decimal(point[0])
+            results['lon'] = Decimal(point[1])
+            print 'Dec LAT/LON=%s,%s' % (Decimal(point[0]), Decimal(point[1])
+            print 'Str LAT/LON=%s,%s' % (point[0],point[1])
         return results
 
     def check_range(self, fromnum, tonum, target):
