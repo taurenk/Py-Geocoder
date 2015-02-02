@@ -279,7 +279,7 @@ class Engine:
         if point: 
             results['lat'] = Decimal(point[0])
             results['lon'] = Decimal(point[1])
-            print 'Dec LAT/LON=%s,%s' % (Decimal(point[0]), Decimal(point[1])
+            print 'Dec LAT/LON=%s,%s' % (Decimal(point[0]), Decimal(point[1]) ) 
             print 'Str LAT/LON=%s,%s' % (point[0],point[1])
         return results
 
