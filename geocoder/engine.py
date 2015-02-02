@@ -276,8 +276,8 @@ class Engine:
         if address.state: results['state'] = address.state
         if address.zip: results['zipcode'] = address.zip
         if point: 
-            results['lat'] = point[0]
-            results['lon'] = point[1]
+            results['lat'] = str(point[0])
+            results['lon'] = str(point[1])
             print 'LAT/LON=%s,%s' % (point[0],point[1])
         return results
 
