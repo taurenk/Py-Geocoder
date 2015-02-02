@@ -278,7 +278,7 @@ class Engine:
         if point: 
             results['lat'] = point[0]
             results['lon'] = point[1]
-
+            print 'LAT/LON=%s,%s' % (point[0],point[1])
         return results
 
     def check_range(self, fromnum, tonum, target):
@@ -411,7 +411,7 @@ class Engine:
     def geocode(self, addr_string):
         try:
             addr = address.Address(self.regexlib, standards.standards(), addr_string)
-            print addr.to_json()
+            # print addr.to_json()
 
             # This will take into account streets + cities.
             if addr.street1:
