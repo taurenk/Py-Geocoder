@@ -3,6 +3,7 @@ import psycopg2
 import address
 import standards
 import regex_library
+from jellyfish import metaphone
 from math import radians, degrees, cos, sin, asin, sqrt, atan, pi, atan2
 import sys
 
@@ -67,6 +68,15 @@ class Engine:
                 "ORDER BY score ASC;"
         return self.execute(query)
 
+    def cities_by_list(self, city_tokens, state_abbr=None):
+        """ Expiremental Query to find cities based on probable city tokens
+        """    
+        query = "SELECT iso_code, zip, place, name1, code1, name2, code2, name3, code3, " +\
+                    "latitude, longitude, accuracy " +\
+                    "FROM place WHERE metaphone(place,5) IN (" + city_tokens + ") " 
+        if state_abbr: query += "AND code1 = '" + state_abbr + "' LIMIT 10;"
+        else: query += ' LIMIT 10;'
+        return self.execute(query)
 
     def geocode_zipcode(self, address):
         """ Find city, state, lat, lon given a zipcode """
@@ -80,6 +90,30 @@ class Engine:
                 return self.create_results(address,[place[0][-2],place[0][-1]])
         except:
             return { 'Error' : 'Could not find zipcode.'}
+
+    
+    def guess_city(self, address):
+        """ This can be done a few ways, we choose
+        3. Tokenize match
+            - PROS: Probally will find a match
+            - CONS: Database Query
+            Return 1 is found, else 0
+        """
+        tokens = address.street1.split(' ')
+        # print '\t\tAddress Tokens:<%s>' % tokens
+        combined = ','.join(["'"+metaphone(token)+"'" for token in tokens] )
+        # print '\t\tList:<%s>' % combined   
+        cities = self.cities_by_list(combined, address.state)
+        # for c in cities: print cities
+        for c in cities:
+            for token in tokens:
+                if c[2] == token:
+                    # print '\t\tCity Found:<%s>' % token
+                    address.city = c[2]
+                    address.street1 = address.street1.replace(token,'').strip()
+                    return c #return place record
+                    break
+        return None
 
     def geocode_address(self, address):
         """ Geocode an address using soley the AddrFeats table """
@@ -138,8 +172,10 @@ class Engine:
         """ ToDo: What if city is still not found?
         Query db for all cities within state?
         """
-        if address.city is None:
-            return self.geocode_zipcode(address)                
+        if (address.city is None) and (address.street1):
+            found_place = self.guess_city(address)
+            if found_place==None: return self.geocode_zipcode(address)
+            places.append(found_place)               
         if not address.street1 or address.street1 == '': 
             return self.geocode_zipcode(address)
 
@@ -161,6 +197,9 @@ class Engine:
             # need to take in fully qualified street...
             address.street1 = '%s %s' % (address.street1,ranked_candidates[0][6])
             interpolated_point = self.interpolate(ranked_candidates[0],address)
+            # Reset City + Zip
+            address.zip = ranked_candidates[0][7]
+            address.city = ranked_candidates[0][8]
             address.geocode_level = 'street'
             return self.create_results(address,interpolated_point)
         else:

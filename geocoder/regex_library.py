@@ -26,7 +26,7 @@ class RegexLib:
 		self.state_regex = re.compile(r'(?:\b' + self.import_state_regex() + r')')
 		self.street_prefix_regex = re.compile(r'^(' + self.import_prefix_regex() + r')' )
 		self.secondary_str_regex = re.compile(r'(?:\s(' + self.import_secondary_regex() + r') \w+?)' )
-
+	
 	def import_state_regex(self):
    		"""Generate the US States regex string """
 		list = []
@@ -48,3 +48,4 @@ class RegexLib:
    			list.append(key + r'\s?') 
    			list.append(standards.standards().tiger_prefix_types[key]+ r'\s?')
    		return r'|'.join(list)
+   		

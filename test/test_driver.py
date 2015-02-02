@@ -5,7 +5,7 @@ import csv
 # Workaround: allows the import of package for testing
 sys.path.insert(0, os.path.abspath('..'))
 # from geocoder import geocoder, address
-from pinpoint.geocoder.engine import Engine
+from PinPointGeocoder.geocoder.engine import Engine
 
 def import_test_data(file):
     dict = {}
@@ -16,7 +16,8 @@ def import_test_data(file):
     return dict
 
 def test_drive():
-    dict = import_test_data('data/cms_data.csv')
+    # dict = import_test_data('test/data/cms_data.csv')
+    dict = import_test_data('test/data/test_data.csv')
     e = Engine()
     for key in dict:
         print '\n\nRow: %s Address: %s' % (key, dict[key])
