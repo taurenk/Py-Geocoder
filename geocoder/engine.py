@@ -194,10 +194,13 @@ class Engine:
             candidates = self.addrfeats_by_street_state(address.street1, address.state)    
             
         if candidates:
+            # print candidates[0]
             ranked_candidates = self.rank_candidates(address, candidates)
             # need to take in fully qualified street...
             address.street1 = '%s %s' % (address.street1,ranked_candidates[0][6])
+            # print '\t%s' % (ranked_candidates[0])
             interpolated_point = self.interpolate(ranked_candidates[0],address)
+            # print '\t\tPoint:%s' % (interpolated_point)
             # Reset City + Zip
             address.zip = ranked_candidates[0][7]
             address.city = ranked_candidates[0][8]
@@ -277,10 +280,8 @@ class Engine:
         if address.state: results['state'] = address.state
         if address.zip: results['zipcode'] = address.zip
         if point: 
-            results['lat'] = Decimal(point[0])
-            results['lon'] = Decimal(point[1])
-            print 'Dec LAT/LON=%s,%s' % (Decimal(point[0]), Decimal(point[1]) ) 
-            print 'Str LAT/LON=%s,%s' % (point[0],point[1])
+            results['lat'] = point[0]
+            results['lon'] = point[1]
         return results
 
     def check_range(self, fromnum, tonum, target):
@@ -313,7 +314,7 @@ class Engine:
         return int(number[:number.index('-')])
     
     def interpolate(self,candidate, address):
-        """ Basic Interpolation Algorithm 
+        """ Basic Street to Coordinates Algorithm [Interpolation] 
         Convert multiline string, determine which side of street,
         total houses, total distance of line, 
         for each point to point:
@@ -322,11 +323,15 @@ class Engine:
         """
         points = []
         points = self.convert_multilinestring(candidate[16])
-        if candidate[-1] == None or len(points) < 3:
-            return [points[0][0], points[0][1]] 
-        elif candidate[16] != None:
-            
+
+        # determine sid e better...please?!
+        if candidate[16] != None:
             try:    
+                """
+                print '\tSide=%s' % candidate[-1]
+                print '\tLfrom/Lto=%s-%s' % (candidate[12],candidate[13])
+                print '\tRfrom/Rto=%s-%s' % (candidate[14],candidate[15])
+                """
                 fromnum = tonum = 0
 
                 if candidate[-1] == 'L':
@@ -336,14 +341,15 @@ class Engine:
                 else: 
                     fromnum = int(candidate[14])
                     tonum = int(candidate[15])
+
+
                 fromnum = float(fromnum)
                 tonum = float(tonum)
                 
-                # This rule is popping up...           
+                # This rule is a thing...          
                 if fromnum == tonum: return [points[0][0], points[0][1]]   
 
                 # Convert multilinestring to lists of points[lists]
-                points = self.convert_multilinestring(candidate[16])
                 total_dist = 0
                 dist_dict = {}
                 for idx in range(len(points)-1):
@@ -357,21 +363,27 @@ class Engine:
                     total_steps = (fromnum-tonum)
             
                 target_hn = float(address.number)
-
-                ratio = total_dist / ((tonum-fromnum)/2) # tohn could be smaller than 
+                ratio = total_dist / ((tonum-fromnum)/2) # tohn could be smaller than
                 target_dist = ((target_hn - fromnum)/2) * ratio
+                
+
                 interpolated_point = None
                 counted_dist = 0
                 for k in dist_dict:
                     counted_dist += dist_dict[k]
-                    if counted_dist >= target_dist:
-                        delta = target_dist - (counted_dist-dist_dict[k])
-                        bearing = self.bearing(points[0][0], points[0][1], points[0+1][0], points[0+1][1])
-                        interpolated_point = self.find_point(points[k][0], points[k][1], bearing, delta)
-                
+                    if counted_dist >= target_dist: 
+                        delta = counted_dist-target_dist
+                        segment_distance = dist_dict[k]-delta 
+                        
+                        bearing = self.bearing2(points[k][0], points[k][1], points[k+1][0], points[k+1][1])
+        
+                        interpolated_point = self.find_point2(points[k][0], points[k][1], bearing, segment_distance)
+                        break
+
                 if interpolated_point is None: raise Exception('Failed to Geocode')
                 else: return interpolated_point
             except:
+                print 'ERROR%s' % sys.exc_info()[0]
                 return [points[0][0], points[0][1]]
         else: 
             return None
@@ -389,25 +401,27 @@ class Engine:
         c = 2 * atan2(sqrt(a), sqrt(1-a))
         return 6371 * c
 
-    def bearing(self,lat1, lon1, lat2, lon2):
+    def bearing2(self, lat1, lon1, lat2, lon2):
         """ Calculate bearing """
         lat1, lat2 = map(radians, [lat1,lat2])
-        y = sin(radians(lon2-lon1)) * cos(lat2);
+        delta = radians((lon2-lon1))
+        y = sin(delta) * cos(lat2)
+        # y = sin(lon2-lon1) * cos(lat2);
         x = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(lon2-lon1)
         bearing = atan2(y, x) 
-        return (degrees(bearing)+360 % 360)
+        return (degrees(bearing) + 360) % 360
 
-
-    def find_point(self, lat, lon, bearing, distance):
+    def find_point2(self, lat, lon, bearing, distance):
         """ create a new point from origin point via 
         a distance and bearing
         """
+        d = distance/63741
         lat, lon, bearing = map(radians, [lat,lon,bearing])
-        d = distance/6371
-
+        
         new_lat = asin( sin(lat) * cos(d) + cos(lat) * sin(d) * cos(bearing) )
         new_lon = lon + atan2(sin(bearing)*sin(d)*cos(lat),
                          cos(d)-sin(lat)*sin(new_lat))
+        new_lon = (new_lon+3*pi) % (2*pi) - pi #normalise...
         return [degrees(new_lat), degrees(new_lon)]
 
     def geocode(self, addr_string):
