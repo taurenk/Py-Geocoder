@@ -7,6 +7,7 @@ from decimal import Decimal
 from jellyfish import metaphone
 from math import radians, degrees, cos, sin, asin, sqrt, atan, pi, atan2
 import sys
+import json
 
 class Engine:
     conn = None
@@ -425,17 +426,19 @@ class Engine:
         return [degrees(new_lat), degrees(new_lon)]
 
     def geocode(self, addr_string):
+        results = ''
         try:
             addr = address.Address(self.regexlib, standards.standards(), addr_string)
             # print addr.to_json()
 
             # This will take into account streets + cities.
             if addr.street1:
-                return self.geocode_address(addr)
+                results = self.geocode_address(addr)
             elif addr.zip:
-                return self.geocode_zipcode(addr)
+                results =  self.geocode_zipcode(addr)
             else:
-                return { 'Error':'No Results.'}
+                results =  { 'Error':'No Results.'}
+            return json.dumps(['results', results])   
         except:
             error = '%s | %s' % (sys.exc_info()[0],sys.exc_info()[1])
-            return {'Error': error}
+            return json.dumps({'Error': error})
