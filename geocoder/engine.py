@@ -438,7 +438,7 @@ class Engine:
                 results =  self.geocode_zipcode(addr)
             else:
                 results =  { 'Error':'No Results.'}
-            return json.dumps(['results', results])   
+            return json.dumps(results)   
         except:
             error = '%s | %s' % (sys.exc_info()[0],sys.exc_info()[1])
             return json.dumps({'Error': error})
