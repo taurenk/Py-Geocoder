@@ -75,46 +75,52 @@ class Engine:
         """    
         query = "SELECT iso_code, zip, place, name1, code1, name2, code2, name3, code3, " +\
                     "latitude, longitude, accuracy " +\
-                    "FROM place WHERE metaphone(place,5) IN (" + city_tokens + ") " 
+                    "FROM place WHERE metaphone(place,10) IN (" + city_tokens + ") " 
         if state_abbr: query += "AND code1 = '" + state_abbr + "' LIMIT 10;"
         else: query += ' LIMIT 10;'
         return self.execute(query)
 
     def geocode_zipcode(self, address):
-        """ Find city, state, lat, lon given a zipcode """
+        """ Find city, state, lat, lon given a zipcode 
+        For testing, Throw "Could not Geocode Zipcode" for tracing
+        """
         try:
             # [zip, city, string distance, county, lat, lon]
             place = self.places_by_zip(address.zip)
             if place:
                 address.city = place[0][1]
                 address.state = place[0][5]
-                address.geocode_level = 'zipcode'
+                address.geocode_level = 'zip'
                 return self.create_results(address,[place[0][-2],place[0][-1]])
         except:
-            return { 'Error' : 'Could not find zipcode.'}
+            return { 'Error' : 'Could not geocode zipcode.'}
 
     
     def guess_city(self, address):
-        """ This can be done a few ways, we choose
-        3. Tokenize match
-            - PROS: Probally will find a match
-            - CONS: Database Query
-            Return 1 is found, else 0
+        """ Typically, cities will be emebeded in the street.
+        To counter this, we tokenize the address and created metaphones 
+        from reversing the list. 
         """
         tokens = address.street1.split(' ')
-        # print '\t\tAddress Tokens:<%s>' % tokens
         combined = ','.join(["'"+metaphone(token)+"'" for token in tokens] )
-        # print '\t\tList:<%s>' % combined   
+        
+        # TODO: Want to make this list for tokens -1,-2.-3
+        #   And combine them. This will ensure we get all cases
+        if len(tokens) >= 2:
+            test_guess = ",'" + metaphone(tokens[-2]) + metaphone(tokens[-1]) + "'"
+            combined += test_guess
+        
         cities = self.cities_by_list(combined, address.state)
-        # for c in cities: print cities
         for c in cities:
+            if c[2] in address.street1:
+                address.city = c[2]
+                address.street1 = address.street1.replace(token,'').strip()
+                return c     
             for token in tokens:
                 if c[2] == token:
-                    # print '\t\tCity Found:<%s>' % token
                     address.city = c[2]
                     address.street1 = address.street1.replace(token,'').strip()
-                    return c #return place record
-                    break
+                    return c  
         return None
 
     def geocode_address(self, address):
@@ -128,8 +134,15 @@ class Engine:
             places = places + self.places_by_city(address.city)
         # TODO-Should "uniquify these zips/citys...
 
+        # 
         if not places: 
-            return  {'Error' : 'Could not find Address.'}
+            # this wont because...not city?
+            city_guessed = self.guess_city(address)
+            # print '\t\tA:%s' % address.to_json()
+            if city_guessed==None: 
+                if address.zip: return self.geocode_zipcode(address)               
+                else: return  {'Error' : 'Could not find a city or zipcode.'}
+                
 
         """ dev-note: take into account case where city name is in street.
         Rule: Extract place names out of the street based on length of city.
@@ -433,7 +446,7 @@ class Engine:
 
             # This will take into account streets + cities.
             if addr.street1:
-                results = self.geocode_address(addr)
+                results = self.geocode_address(addr) # will return a json address...sorta
             elif addr.zip:
                 results =  self.geocode_zipcode(addr)
             else:

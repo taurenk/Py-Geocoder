@@ -1,0 +1,25 @@
+
+
+1. pass initial address to engine.py
+1.a parse address via the address class.
+
+2a. if a street is found, pass it to the geocoder
+
+geocode_address strategy:
+* due to the nature of the address parser, most times the city will be embeded into the 
+street. Work arounds were created to solve this.
+1. find zip/city candidates:
+	a. if zip code, query db
+	b. if city, query db
+	c. if None: return error
+2. if city is NOT found:
+	a. break up street into tokens and compare against candidates. try to match 			potential places to the city embeded in street.
+	b. if no match, use "guess city" function, which queries db for all cities in a 		state in an effort to match. Super inefficent.
+		# Make a 'dev' json entry to find when this happens.
+	c. if no city is found, geocode zip code #level: ZIP
+3. Post Parse address
+	a. look for pretype, posttype, pre-direction, post-direction
+	b. standardize state
+4. Find Candidates
+5. Rank
+6. Interpolate

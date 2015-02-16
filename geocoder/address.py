@@ -21,6 +21,7 @@ class Address:
     street1_postdir = None
     street1_pretype = None
 
+
     street2_predir = None  
     street2 = None
     street2_type = None 
@@ -32,6 +33,7 @@ class Address:
     zip = None
     delta = None # Save remainder of the String
     geocode_level = None
+    dev_sections = None # holds how address was parsed/coded
 
     def __init__(self, regex, standards, address_string):
         self.regex_lib = regex
