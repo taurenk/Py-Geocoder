@@ -4,7 +4,8 @@ import address
 import standards
 import regex_library
 from decimal import Decimal
-from jellyfish import metaphone
+# from jellyfish import metaphone
+from fuzzy import DMetaphone
 from math import radians, degrees, cos, sin, asin, sqrt, atan, pi, atan2
 import sys
 import json
@@ -52,7 +53,7 @@ class Engine:
                 "predirabrv, pretypabrv,suftypabrv, zipl, lcity, zipr, rcity, state, " +\
                 "lfromhn, ltohn, rfromhn, rtohn, ST_asText(geom) " +\
                 "FROM addrfeat " +\
-                "WHERE metaphone(name,6) = metaphone('"+street+"',6) " +\
+                "WHERE dmetaphone(name) = dmetaphone('"+street+"') " +\
                 "AND ( zipl IN ("+ziplist+") OR zipr IN ("+ziplist+") ) " +\
                 "AND levenshtein(name, '"+street+"') < 2 " +\
                 "ORDER BY score;" 
@@ -64,7 +65,7 @@ class Engine:
                 "predirabrv, pretypabrv,suftypabrv, zipl, lcity, zipr, rcity, state, " +\
                 "lfromhn, ltohn, rfromhn, rtohn, ST_asText(geom) " +\
                 "FROM addrfeat " +\
-                "WHERE metaphone(name,5) = metaphone('"+street+"',5) " +\
+                "WHERE dmetaphone(name) = dmetaphone('"+street+"') " +\
                 "AND state = '"+state+"' " +\
                 "AND levenshtein(name, '"+street+"') < 2 " +\
                 "ORDER BY score ASC;"
@@ -75,7 +76,7 @@ class Engine:
         """    
         query = "SELECT iso_code, zip, place, name1, code1, name2, code2, name3, code3, " +\
                     "latitude, longitude, accuracy " +\
-                    "FROM place WHERE metaphone(place,10) IN (" + city_tokens + ") " 
+                    "FROM place WHERE dmetaphone(place) IN (" + city_tokens + ") " 
         if state_abbr: query += "AND code1 = '" + state_abbr + "' LIMIT 10;"
         else: query += ' LIMIT 10;'
         return self.execute(query)
@@ -102,12 +103,13 @@ class Engine:
         from reversing the list. 
         """
         tokens = address.street1.split(' ')
-        combined = ','.join(["'"+metaphone(token)+"'" for token in tokens] )
+        dmetaphone = DMetaphone()
+        combined = ','.join(["'"+dmetaphone(token)[0]+"'" for token in tokens] )
         
         # TODO: Want to make this list for tokens -1,-2.-3
         #   And combine them. This will ensure we get all cases
         if len(tokens) >= 2:
-            test_guess = ",'" + metaphone(tokens[-2]) + metaphone(tokens[-1]) + "'"
+            test_guess = ",'" + dmetaphone(tokens[-2])[0] + dmetaphone(tokens[-1])[0] + "'"
             combined += test_guess
         
         cities = self.cities_by_list(combined, address.state)
@@ -128,17 +130,16 @@ class Engine:
         places = [] # [zip, City, LevDistance, County, lat, lon]
 
         # Gather possible City/Zip/State combinations for the search
+        # Can we make this a bit more efficient?
         if address.zip:
             places = self.places_by_zip(address.zip)
         if address.city:
             places = places + self.places_by_city(address.city)
-        # TODO-Should "uniquify these zips/citys...
-
+        
         # 
         if not places: 
             # this wont because...not city?
             city_guessed = self.guess_city(address)
-            # print '\t\tA:%s' % address.to_json()
             if city_guessed==None: 
                 if address.zip: return self.geocode_zipcode(address)               
                 else: return  {'Error' : 'Could not find a city or zipcode.'}
