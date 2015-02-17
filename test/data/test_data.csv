@@ -2,4 +2,5 @@ ROWID,FACILITY NAME,STREET ADDRESS,CITY,State,Zip
 1,"No City",6 Caputo Drive,Manorville,NY,11940
 2,"No City",1 Elm Street,Tuckahoe,NY,10707
 3,"No City",1 McGuirk Street,East Hampton,NY,11949
-4,"No zip",1 McGuirk Street,East Hampton,NY,
+4,"No City",1 McGuirk Street,East Hampton,New York,11949
+5,"No zip",1 McGuirk Street,East Hampton,NY,

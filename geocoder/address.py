@@ -6,6 +6,7 @@ this is testing version of the address/address parsing class.
 
 import re
 import sys
+import standards
 
 class Address:
     regex_lib = None
@@ -82,6 +83,10 @@ class Address:
         if state:
             self.state = state.group(0).strip().upper()
             addr = addr[0:state.span()[0]]    
+            
+            # State Standardization - to abbreviation
+            if (self.state) and (self.state.upper() in self.standards.states):
+                self.state = self.standards.states[self.state.upper()]
         else:
             self.state = ''
 

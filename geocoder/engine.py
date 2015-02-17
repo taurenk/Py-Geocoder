@@ -3,8 +3,6 @@ import psycopg2
 import address
 import standards
 import regex_library
-from decimal import Decimal
-# from jellyfish import metaphone
 from fuzzy import DMetaphone
 from math import radians, degrees, cos, sin, asin, sqrt, atan, pi, atan2
 import sys
@@ -77,8 +75,8 @@ class Engine:
         query = "SELECT iso_code, zip, place, name1, code1, name2, code2, name3, code3, " +\
                     "latitude, longitude, accuracy " +\
                     "FROM place WHERE dmetaphone(place) IN (" + city_tokens + ") " 
-        if state_abbr: query += "AND code1 = '" + state_abbr + "' LIMIT 10;"
-        else: query += ' LIMIT 10;'
+        if state_abbr: query += "AND code1 = '" + state_abbr + "';"
+        else: query += ';'
         return self.execute(query)
 
     def geocode_zipcode(self, address):
@@ -103,26 +101,39 @@ class Engine:
         from reversing the list. 
         """
         tokens = address.street1.split(' ')
+        tokens.reverse()
+
         dmetaphone = DMetaphone()
-        combined = ','.join(["'"+dmetaphone(token)[0]+"'" for token in tokens] )
         
-        # TODO: Want to make this list for tokens -1,-2.-3
-        #   And combine them. This will ensure we get all cases
-        if len(tokens) >= 2:
-            test_guess = ",'" + dmetaphone(tokens[-2])[0] + dmetaphone(tokens[-1])[0] + "'"
-            combined += test_guess
-        
+        # initial list is just the metaphones of all tokens in address
+        combined = []
+
+        # string together words in order to try and make a match
+        potential_word = ''
+        for idx in range(len(tokens)-1):
+            combined.append(dmetaphone(tokens[idx])[0]) # add metaphone of current word
+            potential_word = tokens[idx] + ' ' +  potential_word # string together words
+            combined.append(dmetaphone(potential_word)[0])
+
+        # combine list into query string 
+        combined = ','.join(["'"+c+"'" for c in combined])
+
         cities = self.cities_by_list(combined, address.state)
+        """ We have to hack this a bit
+        Do it this by TOTAL word count in match
+        example: EAST HAMPTON vs HAMPTON for addresses in NY 
+        """
+        match_list = []
         for c in cities:
             if c[2] in address.street1:
+                match_list.append( (c,c[2].count(' ')) )  # add match and length of hit               
                 address.city = c[2]
-                address.street1 = address.street1.replace(token,'').strip()
-                return c     
-            for token in tokens:
-                if c[2] == token:
-                    address.city = c[2]
-                    address.street1 = address.street1.replace(token,'').strip()
-                    return c  
+                address.street1 = address.street1.replace(c[2],'').strip()    
+        # very unscientific - highest match wins!
+        # ORDER LIST OF TUPLES         
+        match_list.sort(key=lambda tup: tup[1])      
+        if match_list[0]: 
+            return match_list[0][0]
         return None
 
     def geocode_address(self, address):
@@ -142,8 +153,9 @@ class Engine:
             city_guessed = self.guess_city(address)
             if city_guessed==None: 
                 if address.zip: return self.geocode_zipcode(address)               
-                else: return  {'Error' : 'Could not find a city or zipcode.'}
-                
+                else: return  {'Error' : 'Could not find a city or zipcode.'}        
+            else:
+                places.append(city_guessed)
 
         """ dev-note: take into account case where city name is in street.
         Rule: Extract place names out of the street based on length of city.
